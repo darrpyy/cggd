@@ -62,7 +62,7 @@ namespace cg
 	template<typename T>
 	inline T& resource<T>::item(size_t x, size_t y)
 	{
-		return data.at(stride + x * y);
+		return data.at(y * stride + x);
 	}
 	template<typename T>
 	inline size_t resource<T>::size_bytes() const
