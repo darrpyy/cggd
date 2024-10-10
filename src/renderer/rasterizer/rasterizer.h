@@ -118,39 +118,39 @@ namespace cg::renderer
 				vertex.x = (vertex.x + 1.0f) * width * 0.5f;
 				vertex.y = (-vertex.y + 1.0f) * height * 0.5f;
 			}
-		}
+		
+			float2 vertex_a = float2{static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y)};
+			float2 vertex_b = float2{static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y)};
+			float2 vertex_c = float2{static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y)};
 
-		float2 vertex_a = float2{static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y)};
-		float2 vertex_b = float2{static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y)};
-		float2 vertex_c = float2{static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y)};
+			float edge = static_cast<float>(edge_function(vertex_a, vertex_b, vertex_c));
 
-		float edge = static_cast<float>(edge_function(vertex_a, vertex_b, vertex_c));
-
-		int2 min_border = int2{0, 0};
-		int2 max_border = int2{static_cast<int>(width - 1), static_cast<int>(height - 1)};
-		int2 min_vertex = min(vertex_a, min(vertex_b, vertex_c));
-		int2 bb_begin = clamp(min_vertex, min_border, max_border);
-		int2 max_vertex = max(vertex_a, max(vertex_b, vertex_c));
-		int2 bb_end = clamp(max_vertex, min_border, max_border);
-		for (int x = bb_begin.x; x <= bb_end.x; x++)
-		{
-			for (int y = bb_begin.y; y <= bb_end.y; y++)
+			int2 min_border = int2{0, 0};
+			int2 max_border = int2{static_cast<int>(width - 1), static_cast<int>(height - 1)};
+			int2 min_vertex = min(vertex_a, min(vertex_b, vertex_c));
+			int2 bb_begin = clamp(min_vertex, min_border, max_border);
+			int2 max_vertex = max(vertex_a, max(vertex_b, vertex_c));
+			int2 bb_end = clamp(max_vertex, min_border, max_border);
+			for (int x = bb_begin.x; x <= bb_end.x; x++)
 			{
-				int2 point{x, y};
-				int edge0 = edge_function(vertex_a, vertex_b, point);
-				int edge1 = edge_function(vertex_b, vertex_c, point);
-				int edge2 = edge_function(vertex_c, vertex_a, point);
-				if (edge0 >= 0 && edge1 >= 0 && edge2 >= 0)
+				for (int y = bb_begin.y; y <= bb_end.y; y++)
 				{
-					float u = edge1 / edge;
-					float v = edge2 / edge;
-					float w = edge0 / edge;
-					float depth = u * vertices[0].z + v * vertices[1].z + w * vertices[2].z;
-					if (depth_test(depth, static_cast<size_t>(x), static_cast<size_t>(y))){
-						auto pixel = pixel_shader(vertices[0], 0.0f);
-						render_target->item(static_cast<size_t>(x), static_cast<size_t>(y)) = RT::from_color(pixel);
-						if (depth_buffer){
-							depth_buffer->item(static_cast<size_t>(x), static_cast<size_t>(y)) = depth;
+					int2 point{x, y};
+					int edge0 = edge_function(vertex_a, vertex_b, point);
+					int edge1 = edge_function(vertex_b, vertex_c, point);
+					int edge2 = edge_function(vertex_c, vertex_a, point);
+					if (edge0 >= 0 && edge1 >= 0 && edge2 >= 0)
+					{
+						float u = edge1 / edge;
+						float v = edge2 / edge;
+						float w = edge0 / edge;
+						float depth = u * vertices[0].z + v * vertices[1].z + w * vertices[2].z;
+						if (depth_test(depth, static_cast<size_t>(x), static_cast<size_t>(y))){
+							auto pixel = pixel_shader(vertices[0], depth);
+							render_target->item(static_cast<size_t>(x), static_cast<size_t>(y)) = RT::from_color(pixel);
+							if (depth_buffer){
+								depth_buffer->item(static_cast<size_t>(x), static_cast<size_t>(y)) = depth;
+							}
 						}
 					}
 				}
@@ -163,7 +163,6 @@ namespace cg::renderer
 	rasterizer<VB, RT>::edge_function(int2 a, int2 b, int2 c)
 	{
 		return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
-		return 0;
 	}
 
 	template<typename VB, typename RT>
