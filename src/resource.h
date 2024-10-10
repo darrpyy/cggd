@@ -118,7 +118,7 @@ namespace cg
 			clr.r = static_cast<uint8_t>(preprocessed.x);
 			clr.g = static_cast<uint8_t>(preprocessed.y);
 			clr.b = static_cast<uint8_t>(preprocessed.z);
-			return out;
+			return clr;
 		};
 
 		float3 to_float3() const
