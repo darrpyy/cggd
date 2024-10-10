@@ -58,7 +58,9 @@ namespace cg::renderer
 		if (in_render_target) {
 			render_target = in_render_target;
 		}
-		// TODO Lab: 1.06 Adjust `set_render_target`, and `clear_render_target` methods of `cg::renderer::rasterizer` class to consume a depth buffer
+		if (in_depth_buffer) {
+			depth_buffer = in_depth_buffer;
+		}
 	}
 
 	template<typename VB, typename RT>
@@ -76,7 +78,11 @@ namespace cg::renderer
 			for (size_t i = 0; i < render_target->count(); i++){
 				render_target->item(i) = in_clear_value;
 			}}
-		// TODO Lab: 1.06 Adjust `set_render_target`, and `clear_render_target` methods of `cg::renderer::rasterizer` class to consume a depth buffer
+		if (depth_buffer){
+			for (size_t i = 0; i < depth_buffer->count(); i++){
+				depth_buffer->item(i) = in_depth;
+			}
+		}
 	}
 
 	template<typename VB, typename RT>
@@ -114,15 +120,49 @@ namespace cg::renderer
 			}
 		}
 
-		// TODO Lab: 1.05 Add `Rasterization` and `Pixel shader` stages to `draw` method of `cg::renderer::rasterizer`
-		// TODO Lab: 1.06 Add `Depth test` stage to `draw` method of `cg::renderer::rasterizer`
+		float2 vertex_a = float2{static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y)};
+		float2 vertex_b = float2{static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y)};
+		float2 vertex_c = float2{static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y)};
+
+		float edge = static_cast<float>(edge_function(vertex_a, vertex_b, vertex_c));
+
+		int2 min_border = int2{0, 0};
+		int2 max_border = int2{static_cast<int>(width - 1), static_cast<int>(height - 1)};
+		int2 min_vertex = min(vertex_a, min(vertex_b, vertex_c));
+		int2 bb_begin = clamp(min_vertex, min_border, max_border);
+		int2 max_vertex = max(vertex_a, max(vertex_b, vertex_c));
+		int2 bb_end = clamp(max_vertex, min_border, max_border);
+		for (int x = bb_begin.x; x <= bb_end.x; x++)
+		{
+			for (int y = bb_begin.y; y <= bb_end.y; y++)
+			{
+				int2 point{x, y};
+				int edge0 = edge_function(vertex_a, vertex_b, point);
+				int edge1 = edge_function(vertex_b, vertex_c, point);
+				int edge2 = edge_function(vertex_c, vertex_a, point);
+				if (edge0 >= 0 && edge1 >= 0 && edge2 >= 0)
+				{
+					float u = edge1 / edge;
+					float v = edge2 / edge;
+					float w = edge0 / edge;
+					float depth = u * vertices[0].z + v * vertices[1].z + w * vertices[2].z;
+					if (depth_test(depth, static_cast<size_t>(x), static_cast<size_t>(y))){
+						auto pixel = pixel_shader(vertices[0], 0.0f);
+						render_target->item(static_cast<size_t>(x), static_cast<size_t>(y)) = RT::from_color(pixel);
+						if (depth_buffer){
+							depth_buffer->item(static_cast<size_t>(x), static_cast<size_t>(y)) = depth;
+						}
+					}
+				}
+			}
+		}
 	}
 
 	template<typename VB, typename RT>
 	inline int
 	rasterizer<VB, RT>::edge_function(int2 a, int2 b, int2 c)
 	{
-		// TODO Lab: 1.05 Implement `cg::renderer::rasterizer::edge_function` method
+		return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
 		return 0;
 	}
 
