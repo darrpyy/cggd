@@ -46,7 +46,7 @@ namespace cg::renderer
 		size_t width = 1920;
 		size_t height = 1080;
 
-		int edge_function(int2 a, int2 b, int2 c);
+		float edge_function(float2 a, float2 b, float2 c);
 		bool depth_test(float z, size_t x, size_t y);
 	};
 
@@ -108,7 +108,7 @@ namespace cg::renderer
 			vertices[0] = vertex_buffer->item(index_buffer->item(vertex_id++));
 			vertices[1] = vertex_buffer->item(index_buffer->item(vertex_id++));
 			vertices[2] = vertex_buffer->item(index_buffer->item(vertex_id++));
-			
+
 			for (auto& vertex : vertices){
 				float4 coords{vertex.x, vertex.y, vertex.z, 1.0f};
 				auto processed_vertex = vertex_shader(coords, vertex);
@@ -118,29 +118,28 @@ namespace cg::renderer
 				vertex.x = (vertex.x + 1.0f) * width * 0.5f;
 				vertex.y = (-vertex.y + 1.0f) * height * 0.5f;
 			}
-		
-			float2 vertex_a = float2{static_cast<int>(vertices[0].x), static_cast<int>(vertices[0].y)};
-			float2 vertex_b = float2{static_cast<int>(vertices[1].x), static_cast<int>(vertices[1].y)};
-			float2 vertex_c = float2{static_cast<int>(vertices[2].x), static_cast<int>(vertices[2].y)};
 
-			float edge = static_cast<float>(edge_function(vertex_a, vertex_b, vertex_c));
+			float2 vertex_a = float2{vertices[0].x, vertices[0].y};
+			float2 vertex_b = float2{vertices[1].x, vertices[1].y};
+			float2 vertex_c = float2{vertices[2].x, vertices[2].y};
 
-			int2 min_border = int2{0, 0};
-			int2 max_border = int2{static_cast<int>(width - 1), static_cast<int>(height - 1)};
-			int2 min_vertex = min(vertex_a, min(vertex_b, vertex_c));
-			int2 bb_begin = clamp(min_vertex, min_border, max_border);
-			int2 max_vertex = max(vertex_a, max(vertex_b, vertex_c));
-			int2 bb_end = clamp(max_vertex, min_border, max_border);
-			for (int x = bb_begin.x; x <= bb_end.x; x++)
-			{
-				for (int y = bb_begin.y; y <= bb_end.y; y++)
-				{
-					int2 point{x, y};
-					int edge0 = edge_function(vertex_a, vertex_b, point);
-					int edge1 = edge_function(vertex_b, vertex_c, point);
-					int edge2 = edge_function(vertex_c, vertex_a, point);
-					if (edge0 >= 0 && edge1 >= 0 && edge2 >= 0)
-					{
+			float edge = edge_function(vertex_a, vertex_b, vertex_c);
+
+			float2 min_border = float2{0, 0};
+			float2 max_border = float2{static_cast<float>(width - 1), static_cast<float>(height - 1)};
+			float2 min_vertex = min(vertex_a, min(vertex_b, vertex_c));
+			float2 bb_begin = clamp(min_vertex, min_border, max_border);
+			float2 max_vertex = max(vertex_a, max(vertex_b, vertex_c));
+			float2 bb_end = clamp(max_vertex, min_border, max_border);
+
+			for (float x = bb_begin.x; x <= bb_end.x; x += 1.0f) {
+				for (float y = bb_begin.y; y <= bb_end.y; y += 1.0f) {
+					float2 point{x,y};
+					float edge0 = edge_function(vertex_a, vertex_b, point);
+					float edge1 = edge_function(vertex_b, vertex_c, point);
+					float edge2 = edge_function(vertex_c, vertex_a, point);
+
+					if (edge0 >= 0.f && edge1 >= 0.f && edge2 >= 0.f){
 						float u = edge1 / edge;
 						float v = edge2 / edge;
 						float w = edge0 / edge;
@@ -159,8 +158,8 @@ namespace cg::renderer
 	}
 
 	template<typename VB, typename RT>
-	inline int
-	rasterizer<VB, RT>::edge_function(int2 a, int2 b, int2 c)
+	inline float
+	rasterizer<VB, RT>::edge_function(float2 a, float2 b, float2 c)
 	{
 		return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x);
 	}
